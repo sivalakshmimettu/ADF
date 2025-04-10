@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      FACTORY_NAME:
+        description: 'Factory Name'
+        required: true
+        default: 'NewFactoryName'
+      SERVICE_ENDPOINT:
+        description: 'Service Endpoint'
+        required: true
+        default: 'https://newblobendpoint.blob.core.windows.net'
 
 jobs:
   update_json:
@@ -13,10 +23,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set environment variables from secrets
+      - name: Set environment variables from workflow variables
         run: |
-          echo "FACTORY_NAME=${{ secrets.FACTORY_NAME }}" >> $GITHUB_ENV
-          echo "SERVICE_ENDPOINT=${{ secrets.SERVICE_ENDPOINT }}" >> $GITHUB_ENV
+          # Setting the variables from the workflow inputs or defaults
+          echo "FACTORY_NAME=${{ github.event.inputs.FACTORY_NAME }}" >> $GITHUB_ENV
+          echo "SERVICE_ENDPOINT=${{ github.event.inputs.SERVICE_ENDPOINT }}" >> $GITHUB_ENV
 
       - name: Update parameters.json in ARMTemplateForFactory directory
         run: |
