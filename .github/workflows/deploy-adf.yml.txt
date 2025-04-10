@@ -1,0 +1,75 @@
+name: Deploy ADF ARM Templates
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'qa'
+        type: choice
+        options:
+          - qa
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Azure CLI
+      uses: azure/setup-azurecli@v1
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Set Environment Variables
+      id: set-env
+      run: |
+        case "${{ github.event.inputs.environment }}" in
+          qa)
+            echo "RESOURCE_GROUP=rg-qa" >> $GITHUB_ENV
+            echo "ADF_NAME=adf-qa" >> $GITHUB_ENV
+            echo "PARAM_FILE=ADF/ARMTemplateForFactory/parameters/ADF-QA.json" >> $GITHUB_ENV
+            ;;
+          prod)
+            echo "RESOURCE_GROUP=rg-prod" >> $GITHUB_ENV
+            echo "ADF_NAME=adf-prod" >> $GITHUB_ENV
+            echo "PARAM_FILE=ADF/ARMTemplateForFactory/parameters/ADF-PROD.json" >> $GITHUB_ENV
+            ;;
+          *)
+            echo "Invalid environment selected"
+            exit 1
+            ;;
+        esac
+
+    - name: Disable ADF Triggers (Before Deployment)
+      run: |
+        TRIGGERS=$(az datafactory trigger list \
+          --resource-group $RESOURCE_GROUP \
+          --factory-name $ADF_NAME \
+          --query "[].name" -o tsv)
+
+        for TRIGGER in $TRIGGERS; do
+          echo "Disabling trigger: $TRIGGER"
+          az datafactory trigger stop \
+            --resource-group $RESOURCE_GROUP \
+            --factory-name $ADF_NAME \
+            --name $TRIGGER
+        done
+
+    - name: Deploy ADF ARM Template
+      run: |
+        az deployment group create \
+          --name ADFDeployment-${{ github.run_number }} \
+          --resource-group $RESOURCE_GROUP \
+          --template-file ADF/ARMTemplateForFactory/ARMTemplate.json \
+          --parameters @$PARAM_FILE
