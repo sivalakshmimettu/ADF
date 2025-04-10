@@ -1,0 +1,103 @@
+name: Deploy ADF ARM Templates
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev, qa, uat, prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - uat
+          - prod
+      resourceGroup:
+        description: 'Azure Resource Group (e.g. rg-dev)'
+        required: true
+      dataFactoryName:
+        description: 'Azure Data Factory Name (e.g. adf-dev)'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}  # Scoped by environment (dev/qa/uat/prod)
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Azure CLI
+      uses: azure/setup-azurecli@v1
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Set environment variables
+      run: |
+        echo "RESOURCE_GROUP=${{ github.event.inputs.resourceGroup }}" >> $GITHUB_ENV
+        echo "ADF_NAME=${{ github.event.inputs.dataFactoryName }}" >> $GITHUB_ENV
+
+        # Set the parameter file dynamically based on the selected environment
+        if [ "${{ github.event.inputs.environment }}" == "dev" ]; then
+          echo "PARAM_FILE=dev-params.json" >> $GITHUB_ENV
+        elif [ "${{ github.event.inputs.environment }}" == "qa" ]; then
+          echo "PARAM_FILE=qa-params.json" >> $GITHUB_ENV
+        elif [ "${{ github.event.inputs.environment }}" == "uat" ]; then
+          echo "PARAM_FILE=uat-params.json" >> $GITHUB_ENV
+        elif [ "${{ github.event.inputs.environment }}" == "prod" ]; then
+          echo "PARAM_FILE=prod-params.json" >> $GITHUB_ENV
+        fi
+
+    - name: Stop Running ADF Pipelines (if any)
+      run: |
+        echo "Checking running pipelines in $ADF_NAME..."
+        RUNNING_PIPELINES=$(az datafactory pipeline-run query-by-factory \
+          --resource-group $RESOURCE_GROUP \
+          --factory-name $ADF_NAME \
+          --filter "Status eq 'InProgress'" \
+          --query "value[].runId" -o tsv)
+
+        if [ ! -z "$RUNNING_PIPELINES" ]; then
+          for RUN_ID in $RUNNING_PIPELINES; do
+            echo "Stopping pipeline run with ID: $RUN_ID"
+            az datafactory pipeline-run cancel \
+              --resource-group $RESOURCE_GROUP \
+              --factory-name $ADF_NAME \
+              --run-id $RUN_ID
+          done
+        else
+          echo "No running pipelines found."
+        fi
+
+    - name: Deploy ADF ARM Template
+      run: |
+        echo "Deploying ADF to $ADF_NAME in $RESOURCE_GROUP using parameters from $PARAM_FILE"
+        
+        # Check if ARM Template and Parameter file exist
+        if [ ! -f "./templates/arm-template.json" ]; then
+          echo "ARM Template file arm-template.json not found!"
+          exit 1
+        fi
+        
+        if [ ! -f "./templates/$PARAM_FILE" ]; then
+          echo "Parameter file $PARAM_FILE not found!"
+          exit 1
+        fi
+
+        # Deploy the ARM template using Azure CLI
+        az deployment group create \
+          --name ADFDeployment \
+          --resource-group $RESOURCE_GROUP \
+          --template-file ./templates/arm-template.json \
+          --parameters @./templates/${PARAM_FILE}
+
+    - name: Post Deployment Validation (Optional)
+      run: |
+        echo "Validating deployment..."
+        az datafactory factory show --name $ADF_NAME --resource-group $RESOURCE_GROUP
