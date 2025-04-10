@@ -9,14 +9,14 @@ jobs:
   update_json:
     runs-on: ubuntu-latest
 
-    # Define environment variables or use secrets
-    env:
-      FACTORY_NAME: "NewFactoryName"  # Example for setting the value directly
-      SERVICE_ENDPOINT: "https://newblobendpoint.blob.core.windows.net"  # Example for setting the value directly
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Set environment variables from secrets
+        run: |
+          echo "FACTORY_NAME=${{ secrets.FACTORY_NAME }}" >> $GITHUB_ENV
+          echo "SERVICE_ENDPOINT=${{ secrets.SERVICE_ENDPOINT }}" >> $GITHUB_ENV
 
       - name: Update parameters.json in ARMTemplateForFactory directory
         run: |
