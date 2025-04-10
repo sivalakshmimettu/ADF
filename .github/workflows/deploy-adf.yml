@@ -4,30 +4,27 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      FACTORY_NAME:
-        description: 'Factory Name'
-        required: true
-        default: 'NewFactoryName'
-      SERVICE_ENDPOINT:
-        description: 'Service Endpoint'
-        required: true
-        default: 'https://newblobendpoint.blob.core.windows.net'
+  workflow_dispatch:  # This trigger allows manual initiation if needed
+    # This section can remain empty or use variables already defined
 
 jobs:
   update_json:
     runs-on: ubuntu-latest
 
+    # Here we define workflow variables
+    env:
+      FACTORY_NAME: ${{ vars.FACTORY_NAME }}  # Use the value from the variable
+      SERVICE_ENDPOINT: ${{ vars.SERVICE_ENDPOINT }}  # Use the value from the variable
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set environment variables from workflow variables
+      - name: Verify environment variables
         run: |
-          # Setting the variables from the workflow inputs or defaults
-          echo "FACTORY_NAME=${{ github.event.inputs.FACTORY_NAME }}" >> $GITHUB_ENV
-          echo "SERVICE_ENDPOINT=${{ github.event.inputs.SERVICE_ENDPOINT }}" >> $GITHUB_ENV
+          # Verify that the variables are set correctly
+          echo "FACTORY_NAME: $FACTORY_NAME"
+          echo "SERVICE_ENDPOINT: $SERVICE_ENDPOINT"
 
       - name: Update parameters.json in ARMTemplateForFactory directory
         run: |
