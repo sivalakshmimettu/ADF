@@ -12,12 +12,12 @@ on:
           - qa
           - uat
           - prod
-      resourceGroup:
-        description: 'Azure Resource Group (e.g. rg-dev)'
-        required: true
-      dataFactoryName:
-        description: 'Azure Data Factory Name (e.g. adf-dev)'
-        required: true
+      #resourceGroup:
+        #description: 'Azure Resource Group (e.g. rg-dev)'
+        #required: true
+      #dataFactoryName:
+        #description: 'Azure Data Factory Name (e.g. adf-dev)'
+        #required: true
 
 jobs:
   deploy:
