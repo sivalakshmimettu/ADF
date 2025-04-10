@@ -1,45 +1,58 @@
-name: Update JSON File in ARMTemplateForFactory
+name: Deploy with Env-Specific Parameters
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:  # This trigger allows manual initiation if needed
-    # This section can remain empty or use variables already defined
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev or prod)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
 
 jobs:
-  update_json:
+  deploy:
     runs-on: ubuntu-latest
 
-    # Here we define workflow variables
+    # Load the right config based on selected environment
     env:
-      FACTORY_NAME: ${{ vars.FACTORY_NAME }}  # Use the value from the variable
-      SERVICE_ENDPOINT: ${{ vars.SERVICE_ENDPOINT }}  # Use the value from the variable
+      TARGET_ENV: ${{ github.event.inputs.environment }}
+      CONFIG_VALUES: ${{ vars[github.event.inputs.environment] }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Verify environment variables
+      - name: Show selected environment
         run: |
-          # Verify that the variables are set correctly
-          echo "FACTORY_NAME: $FACTORY_NAME"
-          echo "SERVICE_ENDPOINT: $SERVICE_ENDPOINT"
+          echo "Deploying to environment: $TARGET_ENV"
+          echo "Loaded CONFIG_VALUES: $CONFIG_VALUES"
 
-      - name: Update parameters.json in ARMTemplateForFactory directory
+      - name: Extract config values and export as environment variables
         run: |
-          # Install jq to manipulate JSON
-          sudo apt-get install jq
+          for pair in ${CONFIG_VALUES//;/ }; do
+            IFS='=' read -r key value <<< "$pair"
+            echo "$key=$value"
+            echo "$key=$value" >> $GITHUB_ENV
+          done
 
-          # Update the JSON file located in ARMTemplateForFactory/parameters.json with the environment variables
-          jq '.parameters.factoryName.value = env.FACTORY_NAME' ARMTemplateForFactory/parameters.json | \
-          jq '.parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = env.SERVICE_ENDPOINT' > temp.json && mv temp.json ARMTemplateForFactory/parameters.json
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Commit and push changes
+      - name: Update parameters.json with extracted values
         run: |
-          # Commit changes to the parameters.json file in the ARMTemplateForFactory directory
+          jq --arg factory "$FACTORY_NAME" \
+             --arg endpoint "$SERVICE_ENDPOINT" \
+            '.parameters.factoryName.value = $factory |
+             .parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $endpoint' \
+            ARMTemplateForFactory/parameters.json > temp.json && mv temp.json ARMTemplateForFactory/parameters.json
+
+      - name: Commit and push updated parameters.json
+        run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add ARMTemplateForFactory/parameters.json
-          git commit -m "Updated factoryName and serviceEndpoint values in parameters.json"
+          git commit -m "Update parameters.json for $TARGET_ENV environment"
           git push
