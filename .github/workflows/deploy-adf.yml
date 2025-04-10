@@ -1,4 +1,4 @@
-name: Deploy with Env-Specific Parameters
+name: Deploy without jq
 
 on:
   workflow_dispatch:
@@ -9,14 +9,13 @@ on:
         default: 'dev'
         type: choice
         options:
-          - qa
+          - dev
           - prod
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    # Load the right config based on selected environment
     env:
       TARGET_ENV: ${{ github.event.inputs.environment }}
       CONFIG_VALUES: ${{ vars[github.event.inputs.environment] }}
@@ -38,21 +37,21 @@ jobs:
             echo "$key=$value" >> $GITHUB_ENV
           done
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Update parameters.json with extracted values
+      - name: Update parameters.json using sed
         run: |
-          jq --arg factory "$FACTORY_NAME" \
-             --arg endpoint "$SERVICE_ENDPOINT" \
-            '.parameters.factoryName.value = $factory |
-             .parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $endpoint' \
-            ARMTemplateForFactory/parameters.json > temp.json && mv temp.json ARMTemplateForFactory/parameters.json
+          echo "Replacing factoryName and serviceEndpoint in parameters.json..."
+
+          # Escape slashes in SERVICE_ENDPOINT for sed
+          ESCAPED_ENDPOINT=$(echo "$SERVICE_ENDPOINT" | sed 's/[\/&]/\\&/g')
+
+          sed -i "s/\"factoryName\": {[^}]*\"value\": \".*\"/\"factoryName\": {\n      \"value\": \"$FACTORY_NAME\"/g" ARMTemplateForFactory/parameters.json
+
+          sed -i "s/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {\n      \"value\": \"$ESCAPED_ENDPOINT\"/g" ARMTemplateForFactory/parameters.json
 
       - name: Commit and push updated parameters.json
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add ARMTemplateForFactory/parameters.json
-          git commit -m "Update parameters.json for $TARGET_ENV environment"
+          git commit -m "Update parameters.json for $TARGET_ENV environment without jq"
           git push
