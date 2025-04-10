@@ -1,75 +1,34 @@
-name: Deploy ADF ARM Templates
+name: Update JSON File
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'qa'
-        type: choice
-        options:
-          - qa
-          - prod
+  push:
+    branches:
+      - main
 
 jobs:
-  deploy:
+  update_json:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Set up Azure CLI
-      uses: azure/setup-azurecli@v1
+      - name: Set variables from secrets
+        run: |
+          echo "FACTORY_NAME=${{ secrets.FACTORY_NAME }}" >> $GITHUB_ENV
+          echo "SERVICE_ENDPOINT=${{ secrets.SERVICE_ENDPOINT }}" >> $GITHUB_ENV
 
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Update JSON file
+        run: |
+          sudo apt-get install jq
+          # Use the environment variables in the JSON update step
+          jq '.parameters.factoryName.value = env.FACTORY_NAME' parameters.json | \
+          jq '.parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = env.SERVICE_ENDPOINT' > temp.json && mv temp.json parameters.json
 
-    - name: Set Environment Variables
-      id: set-env
-      run: |
-        case "${{ github.event.inputs.environment }}" in
-          qa)
-            echo "RESOURCE_GROUP=rg-qa" >> $GITHUB_ENV
-            echo "ADF_NAME=adf-qa" >> $GITHUB_ENV
-            echo "PARAM_FILE=ADF/ARMTemplateForFactory/parameters/ADF-QA.json" >> $GITHUB_ENV
-            ;;
-          prod)
-            echo "RESOURCE_GROUP=rg-prod" >> $GITHUB_ENV
-            echo "ADF_NAME=adf-prod" >> $GITHUB_ENV
-            echo "PARAM_FILE=ADF/ARMTemplateForFactory/parameters/ADF-PROD.json" >> $GITHUB_ENV
-            ;;
-          *)
-            echo "Invalid environment selected"
-            exit 1
-            ;;
-        esac
-
-    - name: Disable ADF Triggers (Before Deployment)
-      run: |
-        TRIGGERS=$(az datafactory trigger list \
-          --resource-group $RESOURCE_GROUP \
-          --factory-name $ADF_NAME \
-          --query "[].name" -o tsv)
-
-        for TRIGGER in $TRIGGERS; do
-          echo "Disabling trigger: $TRIGGER"
-          az datafactory trigger stop \
-            --resource-group $RESOURCE_GROUP \
-            --factory-name $ADF_NAME \
-            --name $TRIGGER
-        done
-
-    - name: Deploy ADF ARM Template
-      run: |
-        az deployment group create \
-          --name ADFDeployment-${{ github.run_number }} \
-          --resource-group $RESOURCE_GROUP \
-          --template-file ADF/ARMTemplateForFactory/ARMTemplate.json \
-          --parameters @$PARAM_FILE
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add parameters.json
+          git commit -m "Updated factoryName and serviceEndpoint values"
+          git push
