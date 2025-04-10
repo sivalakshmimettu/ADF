@@ -1,0 +1,51 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "DP-ADF-Demo"
+		},
+		"LS_ABLOB_properties_typeProperties_serviceEndpoint": {
+			"value": "https://dpconfigdemo.blob.core.windows.net"
+		},
+		"LS_ABLOB_properties_typeProperties_tenant": {
+			"value": "13085c86-4bcb-460a-a6f0-b373421c6323"
+		},
+		"LS_ABLOB_properties_typeProperties_servicePrincipalId": {
+			"value": "Ee57ef37-f7ef-4f53-a1e4-b0169c3d3c0a"
+		},
+		"LS_ADLSGEN2_properties_typeProperties_url": {
+			"value": "https://dpadlsdemo.dfs.core.windows.net"
+		},
+		"LS_ADLSGEN2_properties_typeProperties_tenant": {
+			"value": "13085c86-4bcb-460a-a6f0-b373421c6323"
+		},
+		"LS_ADLSGEN2_properties_typeProperties_servicePrincipalId": {
+			"value": "Ee57ef37-f7ef-4f53-a1e4-b0169c3d3c0a"
+		},
+		"LS_AKV_properties_typeProperties_baseUrl": {
+			"value": "https://dp-keyvlt-demo.vault.azure.net/"
+		},
+		"LS_ONPREM_SQLSERVER_properties_typeProperties_connectionString_secretName": {
+			"value": "C1-SQL-ConnectionString"
+		},
+		"LS_SYNAPSE_properties_typeProperties_connectionString_secretName": {
+			"value": "synapseconnectionstring"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_ResourceGroup": {
+			"value": "DataPlatform-Demo"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_SubscriptionID": {
+			"value": "543c86f3-c680-437b-a0cf-453e9152ed1d"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_WorkspaceName": {
+			"value": "dp-demo-synapseanalytics"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_SQLPoolName": {
+			"value": "demodpdedicatedsqlpool"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_PauseorResume": {
+			"value": "Pause"
+		}
+	}
+}
