@@ -61,10 +61,8 @@ jobs:
           echo "Checking the parameters.json before modification"
           cat ARMTemplateForFactory/parameters.json
 
-          # Update the factoryName value
+          # Direct sed replacement with correct regex
           sed -i "s#\"factoryName\": {[^}]*\"value\": \".*\"#\"factoryName\": { \"value\": \"$ESCAPED_FACTORY_NAME\" }#g" ARMTemplateForFactory/parameters.json
-
-          # Update the serviceEndpoint value
           sed -i "s#\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"#\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": { \"value\": \"$ESCAPED_ENDPOINT\" }#g" ARMTemplateForFactory/parameters.json
 
       - name: Show parameters.json after modification
