@@ -48,10 +48,10 @@ jobs:
 
           sed -i "s/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {\n      \"value\": \"$ESCAPED_ENDPOINT\"/g" ARMTemplateForFactory/parameters.json
 
-      - name: Commit and push updated parameters.json
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add ARMTemplateForFactory/parameters.json
-          git commit -m "Update parameters.json for $TARGET_ENV environment without jq"
-          git push
+      - name: Upload ARM Template and Parameters as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm-template-${{ github.run_number }}-${{ github.event.inputs.environment }}
+          path: |
+            ARMTemplateForFactory/parameters.json
+            ARMTemplateForFactory/ARMTemplate.json
