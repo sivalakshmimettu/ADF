@@ -6,7 +6,7 @@ on:
       environment:
         description: 'Target environment (qa or prod)'
         required: true
-        default: 'qa'  # Default to 'qa'
+        default: 'qa'
         type: choice
         options:
           - qa
@@ -18,8 +18,8 @@ jobs:
 
     env:
       TARGET_ENV: ${{ github.event.inputs.environment }}
-      FACTORY_NAME: ${{ vars.FACTORY_NAME }}  # GitHub Variable for FACTORY_NAME
-      SERVICE_ENDPOINT: ${{ vars.SERVICE_ENDPOINT }}  # GitHub Variable for SERVICE_ENDPOINT
+      FACTORY_NAME: ${{ vars.FACTORY_NAME }}
+      SERVICE_ENDPOINT: ${{ vars.SERVICE_ENDPOINT }}
       CONFIG_VALUES: ${{ vars[github.event.inputs.environment] }}
 
     steps:
@@ -44,33 +44,21 @@ jobs:
           echo "FACTORY_NAME = $FACTORY_NAME"
           echo "SERVICE_ENDPOINT = $SERVICE_ENDPOINT"
 
-      - name: Show parameters.json before modification
+      - name: Show parameters.json before update
+        run: cat ARMTemplateForFactory/parameters.json
+
+      - name: Update parameters.json using jq
         run: |
-          echo "Showing parameters.json before update:"
-          cat ARMTemplateForFactory/parameters.json
+          echo "Updating parameters.json using jq..."
+          jq \
+            --arg factoryName "$FACTORY_NAME" \
+            --arg serviceEndpoint "$SERVICE_ENDPOINT" \
+            '.parameters.factoryName.value = $factoryName
+             | .parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $serviceEndpoint' \
+            ARMTemplateForFactory/parameters.json > temp.json && mv temp.json ARMTemplateForFactory/parameters.json
 
-      - name: Update parameters.json using sed
-        run: |
-          echo "Replacing factoryName and serviceEndpoint in parameters.json..."
-
-          # Escape special characters like /, &, etc. in FACTORY_NAME and SERVICE_ENDPOINT
-          ESCAPED_FACTORY_NAME=$(echo "$FACTORY_NAME" | sed 's/[&/\]/\\&/g')
-          ESCAPED_ENDPOINT=$(echo "$SERVICE_ENDPOINT" | sed 's/[&/\]/\\&/g')
-
-          # Check the file before modification
-          echo "Checking the parameters.json before modification"
-          cat ARMTemplateForFactory/parameters.json
-
-          # Update the factoryName value
-          sed -i "s#\"factoryName\": {[^}]*\"value\": \".*\"#\"factoryName\": { \"value\": \"$ESCAPED_FACTORY_NAME\" }#g" ARMTemplateForFactory/parameters.json
-
-          # Update the serviceEndpoint value
-          sed -i "s#\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"#\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": { \"value\": \"$ESCAPED_ENDPOINT\" }#g" ARMTemplateForFactory/parameters.json
-
-      - name: Show parameters.json after modification
-        run: |
-          echo "Showing parameters.json after update:"
-          cat ARMTemplateForFactory/parameters.json
+      - name: Show parameters.json after update
+        run: cat ARMTemplateForFactory/parameters.json
 
       - name: Upload ARM Template and Parameters as Artifact
         uses: actions/upload-artifact@v4
