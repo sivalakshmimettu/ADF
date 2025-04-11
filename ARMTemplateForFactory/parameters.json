@@ -1,81 +1,51 @@
-name: Deploy without jq
-
-on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target environment (qa or prod)'
-        required: true
-        default: 'qa'  # Default to 'qa'
-        type: choice
-        options:
-          - qa
-          - prod
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    env:
-      TARGET_ENV: ${{ github.event.inputs.environment }}
-      FACTORY_NAME: ${{ vars.FACTORY_NAME }}  # GitHub Variable for FACTORY_NAME
-      SERVICE_ENDPOINT: ${{ vars.SERVICE_ENDPOINT }}  # GitHub Variable for SERVICE_ENDPOINT
-      CONFIG_VALUES: ${{ vars[github.event.inputs.environment] }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Show selected environment
-        run: |
-          echo "Deploying to environment: $TARGET_ENV"
-          echo "Loaded CONFIG_VALUES: $CONFIG_VALUES"
-
-      - name: Extract config values and export as environment variables
-        run: |
-          for pair in ${CONFIG_VALUES//;/ }; do
-            IFS='=' read -r key value <<< "$pair"
-            echo "$key=$value"
-            echo "$key=$value" >> $GITHUB_ENV
-          done
-
-      - name: Debug environment variables
-        run: |
-          echo "FACTORY_NAME = $FACTORY_NAME"
-          echo "SERVICE_ENDPOINT = $SERVICE_ENDPOINT"
-
-      - name: Show parameters.json before modification
-        run: |
-          echo "Showing parameters.json before update:"
-          cat ARMTemplateForFactory/parameters.json
-
-      - name: Update parameters.json using sed
-        run: |
-          echo "Replacing factoryName and serviceEndpoint in parameters.json..."
-
-          # Escape special characters like /, &, etc. in FACTORY_NAME and SERVICE_ENDPOINT
-          ESCAPED_FACTORY_NAME=$(echo "$FACTORY_NAME" | sed 's/[&/\]/\\&/g')
-          ESCAPED_ENDPOINT=$(echo "$SERVICE_ENDPOINT" | sed 's/[&/\]/\\&/g')
-
-          # Check the file before modification
-          echo "Checking the parameters.json before modification"
-          cat ARMTemplateForFactory/parameters.json
-
-          # Update the factoryName value
-          sed -i "s#\"factoryName\": {[^}]*\"value\": \".*\"#\"factoryName\": { \"value\": \"$ESCAPED_FACTORY_NAME\" }#g" ARMTemplateForFactory/parameters.json
-
-          # Update the serviceEndpoint value
-          sed -i "s#\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"#\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": { \"value\": \"$ESCAPED_ENDPOINT\" }#g" ARMTemplateForFactory/parameters.json
-
-      - name: Show parameters.json after modification
-        run: |
-          echo "Showing parameters.json after update:"
-          cat ARMTemplateForFactory/parameters.json
-
-      - name: Upload ARM Template and Parameters as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: arm-template-${{ github.run_number }}-${{ github.event.inputs.environment }}
-          path: |
-            ARMTemplateForFactory/parameters.json
-            ARMTemplateForFactory/ARMTemplate.json
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "DP-ADF-Demo"
+		},
+		"LS_ABLOB_properties_typeProperties_serviceEndpoint": {
+			"value": "https://dpconfigdemo.blob.core.windows.net"
+		},
+		"LS_ABLOB_properties_typeProperties_tenant": {
+			"value": "13085c86-4bcb-460a-a6f0-b373421c6323"
+		},
+		"LS_ABLOB_properties_typeProperties_servicePrincipalId": {
+			"value": "Ee57ef37-f7ef-4f53-a1e4-b0169c3d3c0a"
+		},
+		"LS_ADLSGEN2_properties_typeProperties_url": {
+			"value": "https://dpadlsdemo.dfs.core.windows.net"
+		},
+		"LS_ADLSGEN2_properties_typeProperties_tenant": {
+			"value": "13085c86-4bcb-460a-a6f0-b373421c6323"
+		},
+		"LS_ADLSGEN2_properties_typeProperties_servicePrincipalId": {
+			"value": "Ee57ef37-f7ef-4f53-a1e4-b0169c3d3c0a"
+		},
+		"LS_AKV_properties_typeProperties_baseUrl": {
+			"value": "https://dp-keyvlt-demo.vault.azure.net/"
+		},
+		"LS_ONPREM_SQLSERVER_properties_typeProperties_connectionString_secretName": {
+			"value": "C1-SQL-ConnectionString"
+		},
+		"LS_SYNAPSE_properties_typeProperties_connectionString_secretName": {
+			"value": "synapseconnectionstring"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_ResourceGroup": {
+			"value": "DataPlatform-Demo"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_SubscriptionID": {
+			"value": "543c86f3-c680-437b-a0cf-453e9152ed1d"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_WorkspaceName": {
+			"value": "dp-demo-synapseanalytics"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_SQLPoolName": {
+			"value": "demodpdedicatedsqlpool"
+		},
+		"TR_SYNAPSE_PAUSE_properties_PL_SYNAPSE_RESUME_PAUSE_parameters_PauseorResume": {
+			"value": "Pause"
+		}
+	}
+}
