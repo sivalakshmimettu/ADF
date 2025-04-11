@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment (dev or prod)'
+        description: 'Target environment (qa or prod)'  # Updated description to reflect 'qa'
         required: true
-        default: 'dev'
+        default: 'qa'  # Change default to 'qa'
         type: choice
         options:
           - qa
@@ -18,6 +18,8 @@ jobs:
 
     env:
       TARGET_ENV: ${{ github.event.inputs.environment }}
+      FACTORY_NAME: ${{ vars.FACTORY_NAME }}  # GitHub Variable for FACTORY_NAME
+      SERVICE_ENDPOINT: ${{ vars.SERVICE_ENDPOINT }}  # GitHub Variable for SERVICE_ENDPOINT
       CONFIG_VALUES: ${{ vars[github.event.inputs.environment] }}
 
     steps:
@@ -42,15 +44,18 @@ jobs:
           echo "FACTORY_NAME = $FACTORY_NAME"
           echo "SERVICE_ENDPOINT = $SERVICE_ENDPOINT"
 
-      - name: Update parameters.json using jq
+      - name: Update parameters.json using sed
         run: |
           echo "Replacing factoryName and serviceEndpoint in parameters.json..."
+          
+          # Escape special characters like /, &, etc. in FACTORY_NAME and SERVICE_ENDPOINT
+          ESCAPED_FACTORY_NAME=$(echo "$FACTORY_NAME" | sed 's/[&/\]/\\&/g')
+          ESCAPED_ENDPOINT=$(echo "$SERVICE_ENDPOINT" | sed 's/[&/\]/\\&/g')
 
-          jq --arg factoryName "$FACTORY_NAME" --arg serviceEndpoint "$SERVICE_ENDPOINT" \
-            '.factoryName.value = $factoryName | .LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $serviceEndpoint' \
-            ARMTemplateForFactory/parameters.json > ARMTemplateForFactory/parameters_updated.json
+          # Apply sed to replace values for factoryName and serviceEndpoint
+          sed -i "s/\"factoryName\": {[^}]*\"value\": \".*\"/\"factoryName\": {\n      \"value\": \"$ESCAPED_FACTORY_NAME\"/g" ARMTemplateForFactory/parameters.json
 
-          mv ARMTemplateForFactory/parameters_updated.json ARMTemplateForFactory/parameters.json
+          sed -i "s/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {\n      \"value\": \"$ESCAPED_ENDPOINT\"/g" ARMTemplateForFactory/parameters.json
 
       - name: Show updated parameters.json
         run: cat ARMTemplateForFactory/parameters.json
