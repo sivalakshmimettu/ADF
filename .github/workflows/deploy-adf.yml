@@ -42,16 +42,15 @@ jobs:
           echo "FACTORY_NAME = $FACTORY_NAME"
           echo "SERVICE_ENDPOINT = $SERVICE_ENDPOINT"
 
-      - name: Update parameters.json using sed
+      - name: Update parameters.json using jq
         run: |
           echo "Replacing factoryName and serviceEndpoint in parameters.json..."
 
-          ESCAPED_ENDPOINT=$(echo "$SERVICE_ENDPOINT" | sed 's/[\/&]/\\&/g')
+          jq --arg factoryName "$FACTORY_NAME" --arg serviceEndpoint "$SERVICE_ENDPOINT" \
+            '.factoryName.value = $factoryName | .LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $serviceEndpoint' \
+            ARMTemplateForFactory/parameters.json > ARMTemplateForFactory/parameters_updated.json
 
-          # Make sure to replace `factoryName` and `serviceEndpoint`
-          sed -i "s/\"factoryName\": {[^}]*\"value\": \".*\"/\"factoryName\": {\n      \"value\": \"$FACTORY_NAME\"/g" ARMTemplateForFactory/parameters.json
-
-          sed -i "s/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {\n      \"value\": \"$ESCAPED_ENDPOINT\"/g" ARMTemplateForFactory/parameters.json
+          mv ARMTemplateForFactory/parameters_updated.json ARMTemplateForFactory/parameters.json
 
       - name: Show updated parameters.json
         run: cat ARMTemplateForFactory/parameters.json
