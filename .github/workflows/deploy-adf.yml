@@ -52,7 +52,7 @@ jobs:
           ESCAPED_FACTORY_NAME=$(echo "$FACTORY_NAME" | sed 's/[&/\]/\\&/g')
           ESCAPED_ENDPOINT=$(echo "$SERVICE_ENDPOINT" | sed 's/[&/\]/\\&/g')
 
-          # Apply sed to replace values for factoryName and serviceEndpoint
+          # Apply sed to replace values for factoryName and serviceEndpoint in parameters.json
           sed -i "s/\"factoryName\": {[^}]*\"value\": \".*\"/\"factoryName\": {\n      \"value\": \"$ESCAPED_FACTORY_NAME\"/g" ARMTemplateForFactory/parameters.json
 
           sed -i "s/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {\n      \"value\": \"$ESCAPED_ENDPOINT\"/g" ARMTemplateForFactory/parameters.json
