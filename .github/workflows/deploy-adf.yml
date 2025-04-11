@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment (qa or prod)'  # Updated description to reflect 'qa'
+        description: 'Target environment (qa or prod)'
         required: true
-        default: 'qa'  # Change default to 'qa'
+        default: 'qa'  # Default to 'qa'
         type: choice
         options:
           - qa
@@ -52,10 +52,11 @@ jobs:
           ESCAPED_FACTORY_NAME=$(echo "$FACTORY_NAME" | sed 's/[&/\]/\\&/g')
           ESCAPED_ENDPOINT=$(echo "$SERVICE_ENDPOINT" | sed 's/[&/\]/\\&/g')
 
-          # Apply sed to replace values for factoryName and serviceEndpoint in parameters.json
-          sed -i "s/\"factoryName\": {[^}]*\"value\": \".*\"/\"factoryName\": {\n      \"value\": \"$ESCAPED_FACTORY_NAME\"/g" ARMTemplateForFactory/parameters.json
+          # Use sed to replace factoryName value in parameters.json
+          sed -i "s#\"factoryName\": {[^}]*\"value\": \".*\"#\"factoryName\": {\n      \"value\": \"$ESCAPED_FACTORY_NAME\"#g" ARMTemplateForFactory/parameters.json
 
-          sed -i "s/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"/\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {\n      \"value\": \"$ESCAPED_ENDPOINT\"/g" ARMTemplateForFactory/parameters.json
+          # Use sed to replace serviceEndpoint value in parameters.json
+          sed -i "s#\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {[^}]*\"value\": \".*\"#\"LS_ABLOB_properties_typeProperties_serviceEndpoint\": {\n      \"value\": \"$ESCAPED_ENDPOINT\"#g" ARMTemplateForFactory/parameters.json
 
       - name: Show updated parameters.json
         run: cat ARMTemplateForFactory/parameters.json
