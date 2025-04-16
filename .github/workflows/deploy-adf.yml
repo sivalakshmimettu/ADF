@@ -30,8 +30,7 @@ jobs:
     needs: pre-checks
     runs-on: ubuntu-latest
     environment:
-      name: qa
-      #url: https://qa.example.com
+      name: qa # this is where GitHub Environments will trigger manual approval
     steps:
       - name: Await approval for QA deployment
         run: echo "Approved QA deployment."
@@ -41,11 +40,7 @@ jobs:
     needs: pre-checks
     runs-on: ubuntu-latest
     environment:
-      name: prod
-      #url: https://prod.example.com
-      deployment_branch_policy:
-        protected_branches: true
-        custom_branch_policies: true
+      name: prod # manual approval step in GitHub Environments
     steps:
       - name: Await approval for PROD deployment
         run: echo "Approved PROD deployment."
