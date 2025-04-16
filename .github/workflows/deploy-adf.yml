@@ -1,4 +1,4 @@
-name: Deploy without jq
+name: Deployment in ADF
 
 on:
   workflow_dispatch:
