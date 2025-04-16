@@ -13,7 +13,49 @@ on:
           - prod
 
 jobs:
+  pre-checks:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.confirm.outputs.proceed }}
+
+    steps:
+      - name: Confirm deployment to ${{ github.event.inputs.environment }}
+        id: confirm
+        run: |
+          echo "Proceeding with deployment to ${{ github.event.inputs.environment }}"
+          echo "proceed=true" >> $GITHUB_OUTPUT
+
+  approve-qa:
+    if: ${{ github.event.inputs.environment == 'qa' }}
+    needs: pre-checks
+    runs-on: ubuntu-latest
+    environment:
+      name: qa
+      #url: https://qa.example.com
+    steps:
+      - name: Await approval for QA deployment
+        run: echo "Approved QA deployment."
+
+  approve-prod:
+    if: ${{ github.event.inputs.environment == 'prod' }}
+    needs: pre-checks
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+      #url: https://prod.example.com
+      deployment_branch_policy:
+        protected_branches: true
+        custom_branch_policies: true
+    steps:
+      - name: Await approval for PROD deployment
+        run: echo "Approved PROD deployment."
+
   deploy:
+    name: Deploy ADF to ${{ github.event.inputs.environment }}
+    needs: [approve-qa, approve-prod]
+    if: |
+      (github.event.inputs.environment == 'qa' && needs.approve-qa.result == 'success') ||
+      (github.event.inputs.environment == 'prod' && needs.approve-prod.result == 'success')
     runs-on: ubuntu-latest
 
     env:
@@ -67,3 +109,17 @@ jobs:
           path: |
             ARMTemplateForFactory/parameters.json
             ARMTemplateForFactory/ARMTemplate.json
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Data Factory
+        run: |
+          echo "Deploying ADF ARM template to resource group: ${{ secrets.RESOURCE_GROUP_NAME }}"
+
+          az deployment group create \
+            --resource-group ${{ secrets.RESOURCE_GROUP_NAME }} \
+            --template-file ARMTemplateForFactory/ARMTemplate.json \
+            --parameters @ARMTemplateForFactory/parameters.json
