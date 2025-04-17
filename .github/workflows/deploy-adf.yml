@@ -60,10 +60,18 @@ jobs:
       - name: Show parameters.json after update
         run: cat ARMTemplateForFactory/parameters.json
 
+      - name: Define and export ARTIFACT_ID
+        run: |
+          ARTIFACT_ID="arm-template-${{ github.run_number }}-${{ github.event.inputs.environment }}-${GITHUB_SHA::7}"
+          echo "Generated Artifact ID: $ARTIFACT_ID"
+          echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_ENV
+          echo "artifact_id=$ARTIFACT_ID" >> $GITHUB_OUTPUT
+        id: versioning
+
       - name: Upload ARM Template and Parameters as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: arm-template-${{ github.run_number }}-${{ github.event.inputs.environment }}
+          name: ${{ steps.versioning.outputs.artifact_id }}
           path: |
             ARMTemplateForFactory/parameters.json
             ARMTemplateForFactory/ARMTemplate.json
