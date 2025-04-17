@@ -1,34 +1,41 @@
-name: ADF Build & Deploy Workflow
+name: Deployment in ADF
 
 on:
   workflow_dispatch:
     inputs:
-      appenv:
-        description: 'Target app environment for deployment'
+      environment:
+        description: 'Target environment (qa or prod)'
         required: true
+        default: 'qa'
         type: choice
         options:
-          - dev
-          - staging
-          - production
-
-permissions:
-  contents: read
+          - qa
+          - prod
 
 jobs:
-  build-adf-artifact:
+  deploy:
     runs-on: ubuntu-latest
+
+    env:
+      TARGET_ENV: ${{ github.event.inputs.environment }}
+      FACTORY_NAME: ${{ vars.FACTORY_NAME }}
+      SERVICE_ENDPOINT: ${{ vars.SERVICE_ENDPOINT }}
+      CONFIG_VALUES: ${{ vars[github.event.inputs.environment] }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Extract and Export Configuration Values
-        env:
-          CONFIG_VALUES: ${{ vars[github.event.inputs.appenv] }}
+      - name: Show selected environment
         run: |
-          echo "Extracting config values for ${{ github.event.inputs.appenv }}..."
+          echo "Deploying to environment: $TARGET_ENV"
+          echo "Loaded CONFIG_VALUES: $CONFIG_VALUES"
+
+      - name: Extract config values and export as environment variables
+        run: |
           for pair in ${CONFIG_VALUES//;/ }; do
             IFS='=' read -r key value <<< "$pair"
+            echo "$key=$value"
             echo "$key=$value" >> $GITHUB_ENV
           done
 
@@ -42,6 +49,7 @@ jobs:
 
       - name: Update parameters.json using jq
         run: |
+          echo "Updating parameters.json using jq..."
           jq \
             --arg factoryName "$FACTORY_NAME" \
             --arg serviceEndpoint "$SERVICE_ENDPOINT" \
@@ -52,120 +60,10 @@ jobs:
       - name: Show parameters.json after update
         run: cat ARMTemplateForFactory/parameters.json
 
-      - name: Define and export ARTIFACT_ID
-        id: versioning
-        run: |
-          ARTIFACT_ID="adf-template-${{ github.run_number }}-${{ github.event.inputs.appenv }}-${GITHUB_SHA::7}"
-          echo "Generated Artifact ID: $ARTIFACT_ID"
-          echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_ENV
-          echo "artifact_id=$ARTIFACT_ID" >> $GITHUB_OUTPUT
-
-      - name: Upload ADF Artifact
+      - name: Upload ARM Template and Parameters as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.versioning.outputs.artifact_id }}
+          name: arm-template-${{ github.run_number }}-${{ github.event.inputs.environment }}
           path: |
             ARMTemplateForFactory/parameters.json
             ARMTemplateForFactory/ARMTemplate.json
-
-  deploy-adf-dev:
-    runs-on: ubuntu-latest
-    needs: build-adf-artifact
-    if: ${{ github.event.inputs.appenv == 'dev' }}
-    environment:
-      name: 'Development'
-
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build-adf-artifact.outputs.artifact_id }}
-
-      # - name: Azure Login
-      #   uses: azure/login@v1
-      #   with:
-      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # - name: Deploy ARM Template to ADF (Dev)
-      #   run: |
-      #     az deployment group create \
-      #       --resource-group ${{ vars.DEV_RESOURCE_GROUP }} \
-      #       --template-file ARMTemplate.json \
-      #       --parameters @parameters.json \
-      #       --name adf-deploy-dev-${{ github.run_number }}
-
-      # - name: Validate ADF Deployment (Dev)
-      #   run: |
-      #     az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.DEV_RESOURCE_GROUP }}
-
-      # - name: Rollback Placeholder (Dev)
-      #   if: failure()
-      #   run: echo "Manual rollback required for Dev environment."
-
-  deploy-adf-staging:
-    runs-on: ubuntu-latest
-    needs: deploy-adf-dev
-    if: ${{ github.event.inputs.appenv == 'staging' }}
-    environment:
-      name: 'Staging'
-
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build-adf-artifact.outputs.artifact_id }}
-
-      # - name: Azure Login
-      #   uses: azure/login@v1
-      #   with:
-      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # - name: Deploy ARM Template to ADF (Staging)
-      #   run: |
-      #     az deployment group create \
-      #       --resource-group ${{ vars.STAGING_RESOURCE_GROUP }} \
-      #       --template-file ARMTemplate.json \
-      #       --parameters @parameters.json \
-      #       --name adf-deploy-staging-${{ github.run_number }}
-
-      # - name: Validate ADF Deployment (Staging)
-      #   run: |
-      #     az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.STAGING_RESOURCE_GROUP }}
-
-      # - name: Rollback Placeholder (Staging)
-      #   if: failure()
-      #   run: echo "Manual rollback required for Staging environment."
-
-  deploy-adf-production:
-    runs-on: ubuntu-latest
-    needs: deploy-adf-staging
-    if: ${{ github.event.inputs.appenv == 'production' }}
-    environment:
-      name: 'Production'
-
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build-adf-artifact.outputs.artifact_id }}
-          
-      # - name: Azure Login
-      #   uses: azure/login@v1
-      #   with:
-      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # - name: Deploy ARM Template to ADF (Production)
-      #   run: |
-      #     az deployment group create \
-      #       --resource-group ${{ vars.PRODUCTION_RESOURCE_GROUP }} \
-      #       --template-file ARMTemplate.json \
-      #       --parameters @parameters.json \
-      #       --name adf-deploy-prod-${{ github.run_number }}
-
-      # - name: Validate ADF Deployment (Production)
-      #   run: |
-      #     az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.PRODUCTION_RESOURCE_GROUP }}
-
-      # - name: Rollback Placeholder (Production)
-      #   if: failure()
-      #   run: echo "Manual rollback required for Production environment."
