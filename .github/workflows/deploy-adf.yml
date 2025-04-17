@@ -81,26 +81,26 @@ jobs:
         with:
           name: ${{ needs.build-adf-artifact.outputs.artifact_id }}
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # - name: Azure Login
+      #   uses: azure/login@v1
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy ARM Template to ADF (Dev)
-        run: |
-          az deployment group create \
-            --resource-group ${{ vars.DEV_RESOURCE_GROUP }} \
-            --template-file ARMTemplate.json \
-            --parameters @parameters.json \
-            --name adf-deploy-dev-${{ github.run_number }}
+      # - name: Deploy ARM Template to ADF (Dev)
+      #   run: |
+      #     az deployment group create \
+      #       --resource-group ${{ vars.DEV_RESOURCE_GROUP }} \
+      #       --template-file ARMTemplate.json \
+      #       --parameters @parameters.json \
+      #       --name adf-deploy-dev-${{ github.run_number }}
 
-      - name: Validate ADF Deployment (Dev)
-        run: |
-          az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.DEV_RESOURCE_GROUP }}
+      # - name: Validate ADF Deployment (Dev)
+      #   run: |
+      #     az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.DEV_RESOURCE_GROUP }}
 
-      - name: Rollback Placeholder (Dev)
-        if: failure()
-        run: echo "Manual rollback required for Dev environment."
+      # - name: Rollback Placeholder (Dev)
+      #   if: failure()
+      #   run: echo "Manual rollback required for Dev environment."
 
   deploy-adf-staging:
     runs-on: ubuntu-latest
@@ -113,28 +113,28 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
-          name: adf-template-${{ github.run_number }}-staging-${{ github.sha }}
+          name: ${{ needs.build-adf-artifact.outputs.artifact_id }}
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # - name: Azure Login
+      #   uses: azure/login@v1
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy ARM Template to ADF (Staging)
-        run: |
-          az deployment group create \
-            --resource-group ${{ vars.STAGING_RESOURCE_GROUP }} \
-            --template-file ARMTemplate.json \
-            --parameters @parameters.json \
-            --name adf-deploy-staging-${{ github.run_number }}
+      # - name: Deploy ARM Template to ADF (Staging)
+      #   run: |
+      #     az deployment group create \
+      #       --resource-group ${{ vars.STAGING_RESOURCE_GROUP }} \
+      #       --template-file ARMTemplate.json \
+      #       --parameters @parameters.json \
+      #       --name adf-deploy-staging-${{ github.run_number }}
 
-      - name: Validate ADF Deployment (Staging)
-        run: |
-          az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.STAGING_RESOURCE_GROUP }}
+      # - name: Validate ADF Deployment (Staging)
+      #   run: |
+      #     az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.STAGING_RESOURCE_GROUP }}
 
-      - name: Rollback Placeholder (Staging)
-        if: failure()
-        run: echo "Manual rollback required for Staging environment."
+      # - name: Rollback Placeholder (Staging)
+      #   if: failure()
+      #   run: echo "Manual rollback required for Staging environment."
 
   deploy-adf-production:
     runs-on: ubuntu-latest
@@ -147,25 +147,25 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
-          name: adf-template-${{ github.run_number }}-production-${{ github.sha }}
+          name: ${{ needs.build-adf-artifact.outputs.artifact_id }}
+          
+      # - name: Azure Login
+      #   uses: azure/login@v1
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # - name: Deploy ARM Template to ADF (Production)
+      #   run: |
+      #     az deployment group create \
+      #       --resource-group ${{ vars.PRODUCTION_RESOURCE_GROUP }} \
+      #       --template-file ARMTemplate.json \
+      #       --parameters @parameters.json \
+      #       --name adf-deploy-prod-${{ github.run_number }}
 
-      - name: Deploy ARM Template to ADF (Production)
-        run: |
-          az deployment group create \
-            --resource-group ${{ vars.PRODUCTION_RESOURCE_GROUP }} \
-            --template-file ARMTemplate.json \
-            --parameters @parameters.json \
-            --name adf-deploy-prod-${{ github.run_number }}
+      # - name: Validate ADF Deployment (Production)
+      #   run: |
+      #     az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.PRODUCTION_RESOURCE_GROUP }}
 
-      - name: Validate ADF Deployment (Production)
-        run: |
-          az datafactory show --name $FACTORY_NAME --resource-group ${{ vars.PRODUCTION_RESOURCE_GROUP }}
-
-      - name: Rollback Placeholder (Production)
-        if: failure()
-        run: echo "Manual rollback required for Production environment."
+      # - name: Rollback Placeholder (Production)
+      #   if: failure()
+      #   run: echo "Manual rollback required for Production environment."
