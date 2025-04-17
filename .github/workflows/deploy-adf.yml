@@ -79,7 +79,7 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
-          name: adf-template-${{ github.run_number }}-dev-${{ github.sha }}
+          name: ${{ needs.build-adf-artifact.outputs.artifact_id }}
 
       - name: Azure Login
         uses: azure/login@v1
