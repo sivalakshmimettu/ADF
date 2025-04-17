@@ -1,10 +1,10 @@
-name: Deployment in ADF
+name: Deploy ADF
 
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment (qa or prod)'
+        description: 'Target environment to deploy (qa/prod)'
         required: true
         default: 'qa'
         type: choice
@@ -12,26 +12,21 @@ on:
           - qa
           - prod
 
+env:
+  CONFIG_VALUES: ${{ inputs.environment == 'qa' && vars.QA_CONFIG_VALUES || vars.PROD_CONFIG_VALUES }}
+  TARGET_ENV: ${{ inputs.environment }}
+
 jobs:
   deploy:
+    name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-
-    env:
-      TARGET_ENV: ${{ github.event.inputs.environment }}
-      FACTORY_NAME: ${{ vars.FACTORY_NAME }}
-      SERVICE_ENDPOINT: ${{ vars.SERVICE_ENDPOINT }}
-      CONFIG_VALUES: ${{ vars[github.event.inputs.environment] }}
+    environment: ${{ inputs.environment }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Show selected environment
-        run: |
-          echo "Deploying to environment: $TARGET_ENV"
-          echo "Loaded CONFIG_VALUES: $CONFIG_VALUES"
-
-      - name: Extract config values and export as environment variables
+      - name: Load environment variables from CONFIG_VALUES
         run: |
           for pair in ${CONFIG_VALUES//;/ }; do
             IFS='=' read -r key value <<< "$pair"
@@ -39,25 +34,26 @@ jobs:
             echo "$key=$value" >> $GITHUB_ENV
           done
 
-      - name: Debug environment variables
+      - name: Print loaded values
         run: |
+          echo "Deploying to environment: $TARGET_ENV"
           echo "FACTORY_NAME = $FACTORY_NAME"
           echo "SERVICE_ENDPOINT = $SERVICE_ENDPOINT"
 
-      - name: Show parameters.json before update
+      - name: View original parameters file
         run: cat ARMTemplateForFactory/parameters.json
 
-      - name: Update parameters.json using jq
+      - name: Update parameters using jq
         run: |
           echo "Updating parameters.json using jq..."
           jq \
             --arg factoryName "$FACTORY_NAME" \
             --arg serviceEndpoint "$SERVICE_ENDPOINT" \
             '.parameters.factoryName.value = $factoryName
-             | .parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $serviceEndpoint' \
+            | .parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $serviceEndpoint' \
             ARMTemplateForFactory/parameters.json > temp.json && mv temp.json ARMTemplateForFactory/parameters.json
 
-      - name: Show parameters.json after update
+      - name: View updated parameters file
         run: cat ARMTemplateForFactory/parameters.json
 
       - name: Generate Artifact ID with Timestamp
@@ -76,3 +72,7 @@ jobs:
           path: |
             ARMTemplateForFactory/parameters.json
             ARMTemplateForFactory/ARMTemplate.json
+
+      - name: Simulate deployment
+        run: |
+          echo "Deploying ADF Factory: $FACTORY_NAME to $SERVICE_ENDPOINT using artifact $ARTIFACT_ID"
