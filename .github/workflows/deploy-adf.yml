@@ -16,36 +16,31 @@ jobs:
   deploy:
     name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}  # This triggers approvals & unlocks env vars
+    environment: ${{ inputs.environment }}  # 🔐 This is when approvals are triggered
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🔍 Debug raw ADF_CONFIG_VALUES
-        run: echo "ADF_CONFIG_VALUES='${{ vars.ADF_CONFIG_VALUES }}'"
-
-      - name: Parse and export environment variables
+      - name: Load and export environment variables after approval
         run: |
-          echo "Parsing ADF_CONFIG_VALUES..."
+          echo "ADF_CONFIG_VALUES after approval: ${{ vars.ADF_CONFIG_VALUES }}"
           CONFIG="${{ vars.ADF_CONFIG_VALUES }}"
-          
           for pair in ${CONFIG//;/ }; do
-            key="${pair%%=*}"
-            value="${pair#*=}"
-            echo "Exporting $key=$value"
+            IFS='=' read -r key value <<< "$pair"
+            echo "$key=$value"
             echo "$key=$value" >> $GITHUB_ENV
           done
 
-      - name: 🔍 Show parsed values
+      - name: Confirm loaded variables
         run: |
-          echo "FACTORY_NAME='$FACTORY_NAME'"
-          echo "SERVICE_ENDPOINT='$SERVICE_ENDPOINT'"
+          echo "FACTORY_NAME=$FACTORY_NAME"
+          echo "SERVICE_ENDPOINT=$SERVICE_ENDPOINT"
 
       - name: View original parameters.json
         run: cat ARMTemplateForFactory/parameters.json
 
-      - name: Replace values using jq
+      - name: Replace parameters using jq
         run: |
           jq \
             --arg factoryName "$FACTORY_NAME" \
