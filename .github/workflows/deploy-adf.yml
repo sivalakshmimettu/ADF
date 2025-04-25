@@ -16,32 +16,40 @@ jobs:
   deploy:
     name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}  # 🔐 This is when approvals are triggered
+    environment: ${{ inputs.environment }}  # Enables environment + approval + vars
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Load and export environment variables after approval
+      - name: 🧪 Show full environment context (debug)
         run: |
-          echo "ADF_CONFIG_VALUES after approval: ${{ vars.ADF_CONFIG_VALUES }}"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "ADF_CONFIG_VALUES from vars: '${{ vars.ADF_CONFIG_VALUES }}'"
+
+      - name: ✅ Parse and export ADF_CONFIG_VALUES to env
+        run: |
           CONFIG="${{ vars.ADF_CONFIG_VALUES }}"
+          echo "Raw config: $CONFIG"
+          
           for pair in ${CONFIG//;/ }; do
-            IFS='=' read -r key value <<< "$pair"
-            echo "$key=$value"
+            key="${pair%%=*}"
+            value="${pair#*=}"
+            echo "Exporting $key=$value"
             echo "$key=$value" >> $GITHUB_ENV
           done
 
-      - name: Confirm loaded variables
+      - name: 🔍 Confirm environment variables are set
         run: |
           echo "FACTORY_NAME=$FACTORY_NAME"
           echo "SERVICE_ENDPOINT=$SERVICE_ENDPOINT"
 
-      - name: View original parameters.json
+      - name: 🗂 View original parameters.json
         run: cat ARMTemplateForFactory/parameters.json
 
-      - name: Replace parameters using jq
+      - name: ✍️ Replace values using jq
         run: |
+          echo "Replacing parameters..."
           jq \
             --arg factoryName "$FACTORY_NAME" \
             --arg serviceEndpoint "$SERVICE_ENDPOINT" \
@@ -49,10 +57,10 @@ jobs:
             | .parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $serviceEndpoint' \
             ARMTemplateForFactory/parameters.json > temp.json && mv temp.json ARMTemplateForFactory/parameters.json
 
-      - name: View updated parameters.json
+      - name: 🔍 View updated parameters.json
         run: cat ARMTemplateForFactory/parameters.json
 
-      - name: Generate Artifact ID
+      - name: 📦 Generate Artifact ID
         id: artifact_versioning
         run: |
           TIMESTAMP=$(date +'%Y%m%d-%H%M%S')
@@ -60,7 +68,7 @@ jobs:
           echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_ENV
           echo "artifact_id=$ARTIFACT_ID" >> $GITHUB_OUTPUT
 
-      - name: Upload artifacts
+      - name: 📤 Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact_versioning.outputs.artifact_id }}
@@ -68,7 +76,7 @@ jobs:
             ARMTemplateForFactory/parameters.json
             ARMTemplateForFactory/ARMTemplate.json
 
-      - name: Simulate deployment
+      - name: 🚀 Simulate deployment
         run: |
           echo "Deploying ADF Factory: $FACTORY_NAME"
           echo "To Endpoint: $SERVICE_ENDPOINT"
