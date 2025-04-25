@@ -13,8 +13,8 @@ on:
           - prod
 
 env:
-  CONFIG_VALUES: ${{ inputs.environment == 'qa' && vars.QA_CONFIG_VALUES || vars.PROD_CONFIG_VALUES }}
   TARGET_ENV: ${{ inputs.environment }}
+  CONFIG_VALUES: ${{ inputs.environment == 'qa' && vars.QA_CONFIG_VALUES || vars.PROD_CONFIG_VALUES }}
 
 jobs:
   deploy:
@@ -26,12 +26,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Debug CONFIG_VALUES
+        run: echo "CONFIG_VALUES = $CONFIG_VALUES"
+
       - name: Load environment variables from CONFIG_VALUES
         run: |
+          echo "Loading variables from CONFIG_VALUES..."
           for pair in ${CONFIG_VALUES//;/ }; do
             IFS='=' read -r key value <<< "$pair"
-            echo "$key=$value"
-            echo "$key=$value" >> $GITHUB_ENV
+            echo "$key=\"$value\""
+            echo "$key=\"$value\"" >> $GITHUB_ENV
           done
 
       - name: Print loaded values
@@ -75,4 +79,6 @@ jobs:
 
       - name: Simulate deployment
         run: |
-          echo "Deploying ADF Factory: $FACTORY_NAME to $SERVICE_ENDPOINT using artifact $ARTIFACT_ID"
+          echo "Deploying ADF Factory: $FACTORY_NAME"
+          echo "Service Endpoint: $SERVICE_ENDPOINT"
+          echo "Using Artifact: $ARTIFACT_ID"
