@@ -16,24 +16,26 @@ jobs:
   deploy:
     name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}  # This links to your 'qa' or 'prod' envs (and their variables)
+    environment: ${{ inputs.environment }}  # Connects to your qa/prod environment with variables set
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      # Combine FACTORY_NAME and SERVICE_ENDPOINT into CONFIG_VALUES (optional debug)
       - name: Combine environment variables into CONFIG_VALUES
         run: |
           CONFIG_VALUES="FACTORY_NAME=$FACTORY_NAME;SERVICE_ENDPOINT=$SERVICE_ENDPOINT"
           echo "CONFIG_VALUES=$CONFIG_VALUES"
           echo "CONFIG_VALUES=$CONFIG_VALUES" >> $GITHUB_ENV
 
+      # Properly load environment variables into GitHub Actions environment
       - name: Load environment variables from CONFIG_VALUES
         run: |
           for pair in ${CONFIG_VALUES//;/ }; do
             IFS='=' read -r key value <<< "$pair"
-            echo "$key=\"$value\""
-            echo "$key=\"$value\"" >> $GITHUB_ENV
+            echo "$key=$value"
+            echo "$key=$value" >> $GITHUB_ENV
           done
 
       - name: Print loaded values
@@ -45,6 +47,7 @@ jobs:
       - name: View original parameters file
         run: cat ARMTemplateForFactory/parameters.json
 
+      # Update parameters.json using jq with clean string values
       - name: Update parameters using jq
         run: |
           jq \
