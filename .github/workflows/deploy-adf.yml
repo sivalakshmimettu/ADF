@@ -16,26 +16,23 @@ jobs:
   deploy:
     name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}  # Links to GitHub Environment with variables
+    environment: ${{ inputs.environment }}  # 🔐 This is when approvals are triggered
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Debug full ADF_CONFIG_VALUES
+      - name: Load and export environment variables after approval
         run: |
-          echo "Received ADF_CONFIG_VALUES: $ADF_CONFIG_VALUES"
-
-      - name: Parse ADF_CONFIG_VALUES into individual variables
-        run: |
-          echo "Parsing ADF_CONFIG_VALUES..."
-          for pair in ${ADF_CONFIG_VALUES//;/ }; do
+          echo "ADF_CONFIG_VALUES after approval: ${{ vars.ADF_CONFIG_VALUES }}"
+          CONFIG="${{ vars.ADF_CONFIG_VALUES }}"
+          for pair in ${CONFIG//;/ }; do
             IFS='=' read -r key value <<< "$pair"
-            echo "Exporting $key=$value"
+            echo "$key=$value"
             echo "$key=$value" >> $GITHUB_ENV
           done
 
-      - name: Confirm variables are set
+      - name: Confirm loaded variables
         run: |
           echo "FACTORY_NAME=$FACTORY_NAME"
           echo "SERVICE_ENDPOINT=$SERVICE_ENDPOINT"
