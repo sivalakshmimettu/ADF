@@ -25,7 +25,7 @@ jobs:
       - name: 🧪 Show full environment context (debug)
         run: |
           echo "Environment: ${{ inputs.environment }}"
-          echo "ADF_CONFIG_VALUES from vars: '${{ vars.ADF_CONFIG_VALUES }}'"
+          echo "ADF_CONFIG_VALUES from vars: ${{ vars.ADF_CONFIG_VALUES }}"
 
       - name: ✅ Parse and export ADF_CONFIG_VALUES to env
         run: |
