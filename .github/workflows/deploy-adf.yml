@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment to deploy (qa/prod)'
+        description: 'Select environment'
         required: true
         default: 'qa'
         type: choice
@@ -16,48 +16,35 @@ jobs:
   deploy:
     name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}  # This links to qa/prod environments
+    environment: ${{ inputs.environment }}  # Links to GitHub Environment with variables
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Debug the ADF_CONFIG_VALUES to ensure it's being passed correctly
-      - name: Debug environment-specific config
+      - name: Debug full ADF_CONFIG_VALUES
         run: |
-          echo "Environment selected: ${{ inputs.environment }}"
-          echo "QA Factory Name: ${{ secrets.QA_FACTORY_NAME }}"
-          echo "QA Service Endpoint: ${{ secrets.QA_SERVICE_ENDPOINT }}"
-          echo "Prod Factory Name: ${{ secrets.PROD_FACTORY_NAME }}"
-          echo "Prod Service Endpoint: ${{ secrets.PROD_SERVICE_ENDPOINT }}"
+          echo "Received ADF_CONFIG_VALUES: $ADF_CONFIG_VALUES"
 
-      # Assign appropriate environment variables based on the selected environment
-      - name: Set environment variables for the selected environment
+      - name: Parse ADF_CONFIG_VALUES into individual variables
         run: |
-          if [ "${{ inputs.environment }}" == "qa" ]; then
-            echo "Using QA Environment"
-            echo "FACTORY_NAME=${{ secrets.QA_FACTORY_NAME }}" >> $GITHUB_ENV
-            echo "SERVICE_ENDPOINT=${{ secrets.QA_SERVICE_ENDPOINT }}" >> $GITHUB_ENV
-          elif [ "${{ inputs.environment }}" == "prod" ]; then
-            echo "Using PROD Environment"
-            echo "FACTORY_NAME=${{ secrets.PROD_FACTORY_NAME }}" >> $GITHUB_ENV
-            echo "SERVICE_ENDPOINT=${{ secrets.PROD_SERVICE_ENDPOINT }}" >> $GITHUB_ENV
-          fi
+          echo "Parsing ADF_CONFIG_VALUES..."
+          for pair in ${ADF_CONFIG_VALUES//;/ }; do
+            IFS='=' read -r key value <<< "$pair"
+            echo "Exporting $key=$value"
+            echo "$key=$value" >> $GITHUB_ENV
+          done
 
-      # Debug the parsed variables to ensure they are being set correctly
-      - name: Print parsed environment variables
+      - name: Confirm variables are set
         run: |
           echo "FACTORY_NAME=$FACTORY_NAME"
           echo "SERVICE_ENDPOINT=$SERVICE_ENDPOINT"
 
-      # View the original parameters.json file before update
-      - name: View original parameters file
+      - name: View original parameters.json
         run: cat ARMTemplateForFactory/parameters.json
 
-      # Update parameters in the parameters.json file using jq
-      - name: Update parameters using jq
+      - name: Replace parameters using jq
         run: |
-          echo "Updating parameters in parameters.json with FACTORY_NAME=$FACTORY_NAME and SERVICE_ENDPOINT=$SERVICE_ENDPOINT"
           jq \
             --arg factoryName "$FACTORY_NAME" \
             --arg serviceEndpoint "$SERVICE_ENDPOINT" \
@@ -65,22 +52,18 @@ jobs:
             | .parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $serviceEndpoint' \
             ARMTemplateForFactory/parameters.json > temp.json && mv temp.json ARMTemplateForFactory/parameters.json
 
-      # View the updated parameters.json file
-      - name: View updated parameters file
+      - name: View updated parameters.json
         run: cat ARMTemplateForFactory/parameters.json
 
-      # Generate Artifact ID with Timestamp
-      - name: Generate Artifact ID with Timestamp
+      - name: Generate Artifact ID
         id: artifact_versioning
         run: |
           TIMESTAMP=$(date +'%Y%m%d-%H%M%S')
-          ARTIFACT_ID="arm-template-${{ github.run_number }}-${{ github.event.inputs.environment }}-$TIMESTAMP"
-          echo "Generated Artifact ID: $ARTIFACT_ID"
+          ARTIFACT_ID="arm-template-${{ github.run_number }}-${{ inputs.environment }}-$TIMESTAMP"
           echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_ENV
           echo "artifact_id=$ARTIFACT_ID" >> $GITHUB_OUTPUT
 
-      # Upload ARM Template and Parameters as Artifact
-      - name: Upload ARM Template and Parameters as Artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact_versioning.outputs.artifact_id }}
@@ -88,9 +71,7 @@ jobs:
             ARMTemplateForFactory/parameters.json
             ARMTemplateForFactory/ARMTemplate.json
 
-      # Simulate deployment
       - name: Simulate deployment
         run: |
           echo "Deploying ADF Factory: $FACTORY_NAME"
-          echo "Service Endpoint: $SERVICE_ENDPOINT"
-          echo "Using Artifact: $ARTIFACT_ID"
+          echo "To Endpoint: $SERVICE_ENDPOINT"
