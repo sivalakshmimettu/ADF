@@ -22,25 +22,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🔍 Check environment and repo variable fallback
+      - name: Check environment and repo variable fallback
         id: config_values
         run: |
           echo "Checking variable source..."
           if [[ -n "${{ vars.ADF_CONFIG_VALUES }}" ]]; then
             CONFIG="${{ vars.ADF_CONFIG_VALUES }}"
-            echo "✅ Using environment-level ADF_CONFIG_VALUES"
+            echo "Using environment-level ADF_CONFIG_VALUES"
           elif [[ -n "${{ secrets.ADF_CONFIG_VALUES }}" ]]; then
             CONFIG="${{ secrets.ADF_CONFIG_VALUES }}"
-            echo "✅ Using secret fallback ADF_CONFIG_VALUES"
+            echo "Using secret fallback ADF_CONFIG_VALUES"
           else
-            echo "❌ No ADF_CONFIG_VALUES found in environment or secrets"
+            echo "No ADF_CONFIG_VALUES found in environment or secrets"
             exit 1
           fi
 
           echo "CONFIG=$CONFIG" >> $GITHUB_ENV
           echo "ADF_CONFIG_VALUES=$CONFIG"
 
-      - name: ✅ Parse and export ADF_CONFIG_VALUES to environment
+      - name: Parse and export ADF_CONFIG_VALUES to environment
         run: |
           echo "Parsing: $CONFIG"
           for pair in ${CONFIG//;/ }; do
@@ -50,15 +50,15 @@ jobs:
             echo "$key=$value" >> $GITHUB_ENV
           done
 
-      - name: 🔍 Confirm parsed values
+      - name: Confirm parsed values
         run: |
           echo "FACTORY_NAME=$FACTORY_NAME"
           echo "SERVICE_ENDPOINT=$SERVICE_ENDPOINT"
 
-      - name: 📄 View original parameters.json
+      - name: View original parameters.json
         run: cat ARMTemplateForFactory/parameters.json
 
-      - name: ✍️ Update values in parameters.json
+      - name: Update values in parameters.json
         run: |
           jq \
             --arg factoryName "$FACTORY_NAME" \
@@ -67,10 +67,10 @@ jobs:
             | .parameters.LS_ABLOB_properties_typeProperties_serviceEndpoint.value = $serviceEndpoint' \
             ARMTemplateForFactory/parameters.json > temp.json && mv temp.json ARMTemplateForFactory/parameters.json
 
-      - name: ✅ Confirm updated parameters.json
+      - name:  Confirm updated parameters.json
         run: cat ARMTemplateForFactory/parameters.json
 
-      - name: 🆔 Generate artifact ID
+      - name:  Generate artifact ID
         id: artifact_versioning
         run: |
           TIMESTAMP=$(date +'%Y%m%d-%H%M%S')
@@ -78,7 +78,7 @@ jobs:
           echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_ENV
           echo "artifact_id=$ARTIFACT_ID" >> $GITHUB_OUTPUT
 
-      - name: 📦 Upload artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact_versioning.outputs.artifact_id }}
@@ -86,7 +86,7 @@ jobs:
             ARMTemplateForFactory/parameters.json
             ARMTemplateForFactory/ARMTemplate.json
 
-      - name: 🚀 Simulate deployment
+      - name: Simulate deployment
         run: |
           echo "Deploying ADF Factory: $FACTORY_NAME"
           echo "To Endpoint: $SERVICE_ENDPOINT"
