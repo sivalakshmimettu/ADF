@@ -19,7 +19,7 @@ token_credential = ClientSecretCredential(client_id=client_id, client_secret=cli
 # Sample values for FabricWorkspace parameters
 workspace_id = os.environ.get('TARGET_WORKSPACE_ID')
 environment = os.environ.get('TARGET_ENVIRONMENT_NAME')
-repository_directory = "./"
+repository_directory = "./workspace"
 #item_type_in_scope = ["Notebook"]
 item_type_in_scope = ["DataPipeline", "Environment", "Notebook"]
  
