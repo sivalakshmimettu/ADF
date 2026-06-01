@@ -6,11 +6,11 @@ on:
       environment:
         description: 'Select Environment'
         required: true
-        default: 'fw-ea-owlsure-qa'
+        default: 'Fabric-qa'
         type: choice
         options:
-          - fw-ea-owlsure-qa
-          - fw-ea-owlsure-uat
+          - Fabric-qa
+          
 
 jobs:
   deploy:
