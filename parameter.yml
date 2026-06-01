@@ -1,23 +1,10 @@
 find_replace:
       
   #  Workspace ID Replacement (should happen first)
-  - find_value: "56f96b53-6dd6-49fb-9681-1f7981ba08d1"
+  - find_value: "fb139938-22c6-402c-bac3-752ec11906f3"
     replace_value:
-      fw-ea-owlsure-qa: "b51d2e48-43e9-4d09-8ac3-6e06a4c68e07"
-      fw-ea-owlsure-uat: "45ecfe72-5442-4c10-91d3-53694a536315"
-      
-  #  lakehouse id
-  - find_value: "f4a23216-d2cc-4c71-bad6-a52343e2751d"
-    replace_value:
-      fw-ea-owlsure-qa: "46ec156b-164b-4441-bd83-b0338a57fc37"
-      fw-ea-owlsure-uat: "30fce5d8-f24f-4672-93ea-e0b9eb946ac6"
- 
-  # Workspace name
-  - find_value: "fw-ea-owlsure-dev"
-    replace_value:
-      fw-ea-owlsure-qa: "fw-ea-owlsure-qa"
-      fw-ea-owlsure-uat: "fw-ea-owlsure-uat"
-  
+      Fabric-qa: "ebed8b01-da60-47aa-88fd-eb6a3c7181a2"
+        
         
  
  
