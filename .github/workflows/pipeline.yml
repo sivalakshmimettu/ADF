@@ -42,7 +42,7 @@ jobs:
             --tenant "${{ secrets.TENANT_ID }}"
 
       - name: Deploy All Components using SPN
-        run: python auth_spn_secret.py
+        run: python auth-secret.py
         env:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
