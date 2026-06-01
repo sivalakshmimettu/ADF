@@ -1,0 +1,51 @@
+name: Deploy Fabric Components
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select Environment'
+        required: true
+        default: 'Fabric-qa'
+        type: choice
+        options:
+          - Fabric-qa
+          
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -U pip
+          pip install fabric-cicd
+          pip install azure-identity
+
+      - name: Azure Login with SPN
+        run: |
+          az login --service-principal \
+            -u "${{ secrets.CLIENT_ID }}" \
+            -p "${{ secrets.CLIENT_SECRET }}" \
+            --tenant "${{ secrets.TENANT_ID }}"
+
+      - name: Deploy All Components using SPN
+        run: python auth-secret.py
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          TARGET_WORKSPACE_ID: ${{ secrets.TARGET_WORKSPACE_ID }}
+          TARGET_ENVIRONMENT_NAME: ${{ github.event.inputs.environment }}

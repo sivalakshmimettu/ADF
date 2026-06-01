@@ -1,0 +1,14 @@
+find_replace:
+      
+  #  Workspace ID Replacement (should happen first)
+  - find_value: "fb139938-22c6-402c-bac3-752ec11906f3"
+    replace_value:
+      Fabric-qa: "ebed8b01-da60-47aa-88fd-eb6a3c7181a2"
+        
+        
+ 
+ 
+     
+  
+      
+ 
